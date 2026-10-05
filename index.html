@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aufrufsystem & Ticket Management</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- PeerJS -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    @keyframes pulse-call {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .call-animation {
+      animation: pulse-call 1.5s infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col">
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-6 py-3.5 flex items-center justify-between shadow-md">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-indigo-600 rounded-xl text-white shadow-sm shadow-indigo-500/50">
+        <i data-lucide="volume-2" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white">Aufrufsystem Live</h1>
+        <p id="headerStatus" class="text-xs text-slate-400">Nicht verbunden</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div id="sessionBadge" class="hidden items-center gap-2 bg-slate-700/80 px-3.5 py-1.5 rounded-full border border-slate-600 text-sm">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-slate-300">Session:</span>
+        <strong id="sessionBadgeCode" class="text-indigo-400 font-mono tracking-wider font-bold">------</strong>
+        <button onclick="copySessionCode()" title="Code kopieren" class="text-slate-400 hover:text-white transition">
+          <i data-lucide="copy" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <button id="disconnectBtn" onclick="leaveSession()" class="hidden text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 px-3 py-1.5 rounded-lg transition">
+        Beenden
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== VIEW 1: SESSION WAHL (START) ==================== -->
+  <main id="viewSetup" class="flex-1 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-slate-800/90 border border-slate-700 rounded-2xl p-6 shadow-2xl space-y-6">
+      <div class="text-center space-y-1.5">
+        <h2 class="text-2xl font-black text-white">Session starten</h2>
+        <p class="text-sm text-slate-400">Verbinde Computer, Tablet und Monitore über einen gemeinsamen Code.</p>
+      </div>
+
+      <!-- Neu erstellen -->
+      <div class="space-y-3">
+        <button id="btnCreateHost" onclick="createHostSession()" class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition active:scale-[0.99]">
+          <i data-lucide="plus-circle" class="w-5 h-5"></i>
+          Neue Session erstellen (Host)
+        </button>
+        <p class="text-xs text-center text-slate-500">Erzeugt einen 6-stelligen Freigabecode wie z. B. 885622</p>
+      </div>
+
+      <div class="relative flex py-1 items-center">
+        <div class="flex-grow border-t border-slate-700"></div>
+        <span class="flex-shrink mx-4 text-xs font-semibold uppercase tracking-wider text-slate-400">oder beitreten</span>
+        <div class="flex-grow border-t border-slate-700"></div>
+      </div>
+
+      <!-- Beitrittsformular -->
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Session-Code (Share-Nummer)</label>
+          <input type="text" id="inputJoinCode" placeholder="z. B. 885622" maxlength="10"
+                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-center text-xl font-mono tracking-widest text-indigo-400 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 uppercase" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Rolle für dieses Gerät auswählen</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="selectRole('admin')" id="roleBtn-admin"
+                    class="role-option p-3 rounded-xl border border-indigo-500 bg-indigo-600/20 text-white flex flex-col items-center gap-1.5 transition text-xs font-semibold">
+              <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
+              Aufruf-Raum (Admin)
+            </button>
+            <button type="button" onclick="selectRole('display')" id="roleBtn-display"
+                    class="role-option p-3 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600 flex flex-col items-center gap-1.5 transition text-xs font-semibold">
+              <i data-lucide="tv" class="w-5 h-5 text-indigo-400"></i>
+              Warteraum (Screen)
+            </button>
+          </div>
+        </div>
+
+        <button id="btnJoin" onclick="joinSession()" class="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition active:scale-[0.99]">
+          <i data-lucide="log-in" class="w-5 h-5"></i>
+          Der Session beitreten
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== VIEW 2: ADMIN / AUFRUF-RAUM ==================== -->
+  <main id="viewAdmin" class="hidden flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl flex items-center justify-between">
+        <div>
+          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Nächste Nummer</span>
+          <p id="adminNextTicketPreview" class="text-3xl font-black text-white font-mono mt-1">#101</p>
+        </div>
+        <button onclick="issueNextTicket()" class="py-3 px-5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition">
+          <i data-lucide="ticket" class="w-5 h-5"></i>
+          Nummer ziehen
+        </button>
+      </div>
+
+      <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl flex items-center justify-between">
+        <div>
+          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Aktuell im Aufruf</span>
+          <p id="adminCurrentCallingNum" class="text-3xl font-black text-amber-400 font-mono mt-1">-</p>
+        </div>
+        <div class="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl">
+          <i data-lucide="megaphone" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl flex items-center justify-between">
+        <div>
+          <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Wartende Personen</span>
+          <p id="adminWaitingCount" class="text-3xl font-black text-emerald-400 font-mono mt-1">0</p>
+        </div>
+        <button onclick="callNextInLine()" class="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-semibold rounded-xl flex items-center gap-2 transition text-sm">
+          <i data-lucide="skip-forward" class="w-4 h-4"></i>
+          Nächsten aufrufen
+        </button>
+      </div>
+    </div>
+
+    <!-- Ticket Liste -->
+    <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-3">
+        <div>
+          <h3 class="font-bold text-lg text-white">Tickets & Nummern Steuerung</h3>
+          <p class="text-xs text-slate-400">Klicke eine Aktion an, um den Status direkt auf Monitoren anzuzeigen.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="clearCompletedTickets()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-300 transition">
+            Erledigte ausblenden
+          </button>
+          <button onclick="resetAllTickets()" class="text-xs bg-rose-600/20 text-rose-300 hover:bg-rose-600/30 border border-rose-500/40 px-3 py-1.5 rounded-lg transition">
+            Alles zurücksetzen
+          </button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-900/60 text-slate-400 text-xs uppercase font-medium">
+            <tr>
+              <th class="py-3 px-4 rounded-l-xl">Ticket #</th>
+              <th class="py-3 px-4">Erstellt</th>
+              <th class="py-3 px-4">Aktueller Status</th>
+              <th class="py-3 px-4 text-right rounded-r-xl">Aktion wählen</th>
+            </tr>
+          </thead>
+          <tbody id="adminTicketTableBody" class="divide-y divide-slate-700/50"></tbody>
+        </table>
+      </div>
+
+      <div id="adminEmptyState" class="py-12 text-center text-slate-500 hidden">
+        <i data-lucide="inbox" class="w-10 h-10 mx-auto stroke-1 mb-2"></i>
+        <p>Noch keine Nummern im System vorhanden. Klicke auf "Nummer ziehen".</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== VIEW 3: WARTERAUM SCREEN ==================== -->
+  <main id="viewDisplay" class="hidden flex-1 p-6 md:p-10 flex flex-col justify-between max-w-7xl mx-auto w-full">
+    <div id="displayCallBanner" class="bg-gradient-to-r from-indigo-900/80 via-slate-800 to-indigo-900/80 border-2 border-indigo-500/50 rounded-3xl p-8 md:p-12 shadow-2xl text-center flex flex-col items-center justify-center space-y-4 transition-all">
+      <span class="px-4 py-1.5 rounded-full text-sm font-semibold uppercase tracking-widest bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+        Aktueller Aufruf
+      </span>
+      <div id="displayMainNumber" class="text-7xl md:text-9xl font-black text-white font-mono tracking-tight drop-shadow-md">
+        ---
+      </div>
+      <div id="displayMainStatus" class="text-2xl md:text-4xl font-extrabold text-amber-400 uppercase tracking-wide">
+        Bitte Warten
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+      <div class="bg-slate-800/90 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="door-open" class="w-5 h-5 text-emerald-400"></i>
+          Bitte eintreten (In Bearbeitung)
+        </h3>
+        <div id="displayActiveList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      </div>
+
+      <div class="bg-slate-800/90 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-4">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <i data-lucide="clock" class="w-5 h-5 text-amber-400"></i>
+          Bitte noch warten
+        </h3>
+        <div id="displayWaitingList" class="flex flex-wrap gap-2.5"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center py-3 text-xs text-slate-500 border-t border-slate-800">
+    Aufrufsystem • Standalone HTML • P2P WebRTC Synchronisation
+  </footer>
+
+  <!-- ==================== JAVASCRIPT ==================== -->
+  <script>
+    const state = {
+      sessionId: null,
+      role: 'admin',
+      isHost: false,
+      nextNumber: 101,
+      tickets: [],
+      statusTypes: {
+        WAIT: { label: 'Bitte warten', color: 'amber', isTerminal: false },
+        ROOM_1: { label: 'Bitte in Raum 1', color: 'emerald', room: 'Raum 1', isTerminal: false },
+        ROOM_2: { label: 'Bitte in Raum 2', color: 'emerald', room: 'Raum 2', isTerminal: false },
+        ROOM_3: { label: 'Bitte in Raum 3', color: 'emerald', room: 'Raum 3', isTerminal: false },
+        DONE: { label: 'Fertig', color: 'slate', isTerminal: true },
+        REJECTED: { label: 'Abgelehnt', color: 'rose', isTerminal: true }
+      }
+    };
+
+    let peer = null;
+    let connections = [];
+
+    function playChime() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const osc1 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now);
+        osc1.frequency.exponentialRampToValueAtTime(880, now + 0.18);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
+        osc1.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc1.start(now);
+        osc1.stop(now + 1.2);
+      } catch (e) {
+        console.warn('Audio konnte nicht abgespielt werden:', e);
+      }
+    }
+
+    function speakCall(number, statusText) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(`Nummer ${number}. ${statusText}`);
+        utterance.lang = 'de-DE';
+        utterance.rate = 0.95;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+
+    function selectRole(role) {
+      state.role = role;
+      document.querySelectorAll('.role-option').forEach(el => {
+        el.classList.remove('border-indigo-500', 'bg-indigo-600/20', 'text-white');
+        el.classList.add('border-slate-700', 'bg-slate-900/60', 'text-slate-300');
+      });
+      const activeBtn = document.getElementById(`roleBtn-${role}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('border-slate-700', 'bg-slate-900/60', 'text-slate-300');
+        activeBtn.classList.add('border-indigo-500', 'bg-indigo-600/20', 'text-white');
+      }
+    }
+
+    const PEER_PREFIX = 'aufruf-sess-';
+
+    function generateSessionCode() {
+      return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    function createHostSession() {
+      const code = generateSessionCode();
+      state.sessionId = code;
+      state.isHost = true;
+      state.role = 'admin';
+      initPeer(PEER_PREFIX + code, true);
+    }
+
+    function joinSession() {
+      const codeInput = document.getElementById('inputJoinCode').value.trim();
+      if (!codeInput) {
+        alert('Bitte gib einen gültigen Session-Code ein.');
+        return;
+      }
+      state.sessionId = codeInput;
+      state.isHost = false;
+      initPeer(null, false);
+    }
+
+    function initPeer(customId, asHost) {
+      document.getElementById('headerStatus').innerText = 'Verbinde mit Server...';
+
+      const peerConfig = {
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' }
+          ]
+        }
+      };
+
+      if (peer) {
+        peer.destroy();
+      }
+
+      peer = customId ? new Peer(customId, peerConfig) : new Peer(peerConfig);
+
+      peer.on('open', (id) => {
+        console.log('Peer ID erstellt:', id);
+        if (asHost) {
+          setupHostListeners();
+          onConnectedSuccess();
+        } else {
+          document.getElementById('headerStatus').innerText = 'Verbinde mit Host...';
+          const targetHostId = PEER_PREFIX + state.sessionId;
+          const conn = peer.connect(targetHostId, { reliable: true });
+
+          const timeout = setTimeout(() => {
+            if (!conn.open) {
+              alert('Konnte Host nicht finden. Bitte prüfe den Code und stelle sicher, dass der Host online ist.');
+              leaveSession();
+            }
+          }, 8000);
+
+          conn.on('open', () => {
+            clearTimeout(timeout);
+            connections = [conn];
+            onConnectedSuccess();
+            conn.send({ type: 'REQUEST_SYNC' });
+          });
+
+          conn.on('data', (data) => {
+            handleIncomingData(data);
+          });
+
+          conn.on('close', () => {
+            alert('Verbindung zum Host beendet.');
+            leaveSession();
+          });
+
+          conn.on('error', (err) => {
+            clearTimeout(timeout);
+            console.error('Conn-Fehler:', err);
+            alert('Verbindungsfehler zum Host.');
+            leaveSession();
+          });
+        }
+      });
+
+      peer.on('error', (err) => {
+        console.error('Peer-Fehler:', err);
+        if (err.type === 'unavailable-id') {
+          alert('Dieser Session-Code ist bereits belegt. Bitte neuen erstellen.');
+        } else if (err.type === 'peer-unavailable') {
+          alert('Host nicht gefunden. Bitte Session-Code prüfen.');
+        } else {
+          alert('Netzwerkfehler: ' + (err.message || err.type));
+        }
+        leaveSession();
+      });
+    }
+
+    function setupHostListeners() {
+      peer.on('connection', (conn) => {
+        connections.push(conn);
+        console.log('Neuer Client verbunden:', conn.peer);
+
+        conn.on('data', (data) => {
+          handleIncomingData(data);
+          if (['UPDATE_TICKETS', 'NEW_TICKET', 'SET_STATUS'].includes(data.type)) {
+            broadcastState();
+          }
+        });
+
+        conn.on('close', () => {
+          connections = connections.filter(c => c !== conn);
+        });
+
+        setTimeout(() => {
+          if (conn.open) {
+            conn.send({
+              type: 'FULL_STATE',
+              payload: {
+                tickets: state.tickets,
+                nextNumber: state.nextNumber
+              }
+            });
+          }
+        }, 300);
+      });
+    }
+
+    function broadcastState(highlightCall = null) {
+      const payload = {
+        tickets: state.tickets,
+        nextNumber: state.nextNumber,
+        callEvent: highlightCall
+      };
+
+      connections.forEach(conn => {
+        if (conn.open) {
+          conn.send({ type: 'FULL_STATE', payload });
+        }
+      });
+    }
+
+    function handleIncomingData(data) {
+      if (data.type === 'FULL_STATE') {
+        state.tickets = data.payload.tickets;
+        state.nextNumber = data.payload.nextNumber;
+        renderAll();
+
+        if (data.payload.callEvent) {
+          onTicketAnnounced(data.payload.callEvent);
+        }
+      } else if (data.type === 'REQUEST_SYNC' && state.isHost) {
+        broadcastState();
+      } else if (data.type === 'CLIENT_ACTION' && state.isHost) {
+        // Aktionen von Clients verarbeiten
+        if (data.action === 'ISSUE') {
+          issueNextTicket();
+        } else if (data.action === 'STATUS') {
+          setTicketStatus(data.number, data.statusCode);
+        } else if (data.action === 'CLEAR') {
+          clearCompletedTickets();
+        } else if (data.action === 'RESET') {
+          resetAllTickets();
+        }
+      }
+    }
+
+    function onConnectedSuccess() {
+      document.getElementById('headerStatus').innerText = state.isHost ? 'Host (Verbunden)' : 'Client (Verbunden)';
+      document.getElementById('sessionBadge').classList.remove('hidden');
+      document.getElementById('sessionBadge').classList.add('flex');
+      document.getElementById('sessionBadgeCode').innerText = state.sessionId;
+      document.getElementById('disconnectBtn').classList.remove('hidden');
+
+      document.getElementById('viewSetup').classList.add('hidden');
+      if (state.role === 'admin') {
+        document.getElementById('viewAdmin').classList.remove('hidden');
+      } else {
+        document.getElementById('viewDisplay').classList.remove('hidden');
+      }
+
+      renderAll();
+      lucide.createIcons();
+    }
+
+    function leaveSession() {
+      if (peer) {
+        peer.destroy();
+        peer = null;
+      }
+      connections = [];
+      state.sessionId = null;
+      state.isHost = false;
+
+      document.getElementById('sessionBadge').classList.add('hidden');
+      document.getElementById('sessionBadge').classList.remove('flex');
+      document.getElementById('disconnectBtn').classList.add('hidden');
+      document.getElementById('headerStatus').innerText = 'Nicht verbunden';
+
+      document.getElementById('viewAdmin').classList.add('hidden');
+      document.getElementById('viewDisplay').classList.add('hidden');
+      document.getElementById('viewSetup').classList.remove('hidden');
+    }
+
+    function copySessionCode() {
+      if (state.sessionId) {
+        navigator.clipboard.writeText(state.sessionId);
+        alert('Session Code kopiert: ' + state.sessionId);
+      }
+    }
+
+    function issueNextTicket() {
+      if (!state.isHost && connections[0]) {
+        connections[0].send({ type: 'CLIENT_ACTION', action: 'ISSUE' });
+        return;
+      }
+
+      const ticketNum = state.nextNumber;
+      state.nextNumber++;
+
+      const newTicket = {
+        number: ticketNum,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'WAIT',
+        room: null,
+        calledAt: null
+      };
+
+      state.tickets.unshift(newTicket);
+      saveAndSync();
+      renderAll();
+    }
+
+    function setTicketStatus(number, statusCode) {
+      if (!state.isHost && connections[0]) {
+        connections[0].send({ type: 'CLIENT_ACTION', action: 'STATUS', number, statusCode });
+        return;
+      }
+
+      const ticket = state.tickets.find(t => t.number === number);
+      if (!ticket) return;
+
+      const conf = state.statusTypes[statusCode];
+      ticket.status = statusCode;
+      ticket.room = conf.room || null;
+      ticket.calledAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const callEvent = {
+        number: ticket.number,
+        statusText: conf.label,
+        room: ticket.room
+      };
+
+      saveAndSync(callEvent);
+      renderAll();
+      onTicketAnnounced(callEvent);
+    }
+
+    function callNextInLine() {
+      const waiting = [...state.tickets].reverse().find(t => t.status === 'WAIT');
+      if (waiting) {
+        setTicketStatus(waiting.number, 'ROOM_1');
+      } else {
+        alert('Keine wartenden Tickets in der Warteschlange.');
+      }
+    }
+
+    function clearCompletedTickets() {
+      if (!state.isHost && connections[0]) {
+        connections[0].send({ type: 'CLIENT_ACTION', action: 'CLEAR' });
+        return;
+      }
+      state.tickets = state.tickets.filter(t => !state.statusTypes[t.status].isTerminal);
+      saveAndSync();
+      renderAll();
+    }
+
+    function resetAllTickets() {
+      if (confirm('Möchtest du wirklich alle Tickets zurücksetzen?')) {
+        if (!state.isHost && connections[0]) {
+          connections[0].send({ type: 'CLIENT_ACTION', action: 'RESET' });
+          return;
+        }
+        state.tickets = [];
+        state.nextNumber = 101;
+        saveAndSync();
+        renderAll();
+      }
+    }
+
+    function saveAndSync(callEvent = null) {
+      if (state.isHost) {
+        broadcastState(callEvent);
+      }
+    }
+
+    function onTicketAnnounced(callEvent) {
+      playChime();
+      speakCall(callEvent.number, callEvent.statusText);
+
+      const banner = document.getElementById('displayCallBanner');
+      if (banner) {
+        banner.classList.add('call-animation', 'border-amber-400');
+        setTimeout(() => {
+          banner.classList.remove('call-animation', 'border-amber-400');
+        }, 4000);
+      }
+    }
+
+    function renderAll() {
+      renderAdminView();
+      renderDisplayView();
+      lucide.createIcons();
+    }
+
+    function renderAdminView() {
+      document.getElementById('adminNextTicketPreview').innerText = '#' + state.nextNumber;
+
+      const waitingTickets = state.tickets.filter(t => t.status === 'WAIT');
+      document.getElementById('adminWaitingCount').innerText = waitingTickets.length;
+
+      const lastCalled = state.tickets.find(t => t.status.startsWith('ROOM_'));
+      document.getElementById('adminCurrentCallingNum').innerText = lastCalled ? '#' + lastCalled.number + ` (${lastCalled.room})` : '-';
+
+      const tbody = document.getElementById('adminTicketTableBody');
+      const emptyState = document.getElementById('adminEmptyState');
+      tbody.innerHTML = '';
+
+      if (state.tickets.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      state.tickets.forEach(ticket => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-700/30 transition';
+
+        const st = state.statusTypes[ticket.status] || state.statusTypes['WAIT'];
+
+        let badgeBg = 'bg-slate-700 text-slate-300';
+        if (st.color === 'amber') badgeBg = 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        if (st.color === 'emerald') badgeBg = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        if (st.color === 'rose') badgeBg = 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-mono font-bold text-lg text-white">#${ticket.number}</td>
+          <td class="py-3 px-4 text-slate-400 text-xs">${ticket.time}</td>
+          <td class="py-3 px-4">
+            <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${badgeBg}">
+              ${st.label}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-right">
+            <div class="inline-flex flex-wrap gap-1 justify-end">
+              <button onclick="setTicketStatus(${ticket.number}, 'WAIT')" class="px-2 py-1 text-xs bg-amber-600/20 text-amber-300 hover:bg-amber-600/40 rounded border border-amber-600/40 font-medium">Warten</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_1')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">Raum 1</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_2')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">Raum 2</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_3')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">Raum 3</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'DONE')" class="px-2 py-1 text-xs bg-slate-700 text-slate-300 hover:bg-slate-600 rounded border border-slate-600 font-medium">Fertig</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'REJECTED')" class="px-2 py-1 text-xs bg-rose-600/20 text-rose-300 hover:bg-rose-600/40 rounded border border-rose-600/40 font-medium">Abgelehnt</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderDisplayView() {
+      const lastCalled = state.tickets.find(t => t.status.startsWith('ROOM_')) || state.tickets[0];
+
+      if (lastCalled) {
+        document.getElementById('displayMainNumber').innerText = '#' + lastCalled.number;
+        const st = state.statusTypes[lastCalled.status];
+        document.getElementById('displayMainStatus').innerText = st ? st.label : 'Bitte Warten';
+      } else {
+        document.getElementById('displayMainNumber').innerText = '---';
+        document.getElementById('displayMainStatus').innerText = 'Willkommen';
+      }
+
+      const activeList = document.getElementById('displayActiveList');
+      activeList.innerHTML = '';
+      const inRooms = state.tickets.filter(t => t.status.startsWith('ROOM_'));
+
+      if (inRooms.length === 0) {
+        activeList.innerHTML = '<p class="text-sm text-slate-500 italic col-span-2">Derzeit wird niemand aufgerufen.</p>';
+      } else {
+        inRooms.slice(0, 6).forEach(t => {
+          const card = document.createElement('div');
+          card.className = 'p-3.5 bg-slate-900/80 border border-emerald-500/40 rounded-2xl flex items-center justify-between';
+          card.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="text-2xl font-black text-white font-mono">#${t.number}</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold uppercase">${t.room}</span>
+            </div>
+            <span class="text-xs text-slate-400 font-mono">${t.calledAt || ''}</span>
+          `;
+          activeList.appendChild(card);
+        });
+      }
+
+      const waitingList = document.getElementById('displayWaitingList');
+      waitingList.innerHTML = '';
+      const waiting = state.tickets.filter(t => t.status === 'WAIT');
+
+      if (waiting.length === 0) {
+        waitingList.innerHTML = '<p class="text-sm text-slate-500 italic">Keine wartenden Nummern.</p>';
+      } else {
+        waiting.forEach(t => {
+          const pill = document.createElement('span');
+          pill.className = 'px-3.5 py-1.5 rounded-xl bg-slate-900 border border-amber-500/30 text-amber-300 font-mono font-bold text-base';
+          pill.innerText = '#' + t.number;
+          waitingList.appendChild(pill);
+        });
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
