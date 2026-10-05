@@ -50,7 +50,7 @@
     </div>
   </header>
 
-  <!-- ==================== VIEW 1: SESSION WAHL (START) ==================== -->
+  <!-- ==================== VIEW 1: SESSION SETUP ==================== -->
   <main id="viewSetup" class="flex-1 flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-slate-800/90 border border-slate-700 rounded-2xl p-6 shadow-2xl space-y-6">
       <div class="text-center space-y-1.5">
@@ -58,13 +58,13 @@
         <p class="text-sm text-slate-400">Verbinde Computer, Tablet und Monitore über einen gemeinsamen Code.</p>
       </div>
 
-      <!-- Neu erstellen -->
+      <!-- Host Button -->
       <div class="space-y-3">
         <button id="btnCreateHost" onclick="createHostSession()" class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition active:scale-[0.99]">
-          <i data-lucide="plus-circle" class="w-5 h-5"></i>
-          Neue Session erstellen (Host)
+          <i data-lucide="shield-check" class="w-5 h-5"></i>
+          Neue Session erstellen (Admin Host)
         </button>
-        <p class="text-xs text-center text-slate-500">Erzeugt einen 6-stelligen Freigabecode wie z. B. 885622</p>
+        <p class="text-xs text-center text-slate-500">Startet das Hauptsystem (schaltet andere Stationen frei)</p>
       </div>
 
       <div class="relative flex py-1 items-center">
@@ -82,19 +82,48 @@
         </div>
 
         <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Dein Name / Stationsname</label>
+          <input type="text" id="inputUserName" placeholder="z. B. Eingang-Tablet / Dr. Weber"
+                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" />
+        </div>
+
+        <div>
           <label class="block text-xs font-medium text-slate-300 mb-1">Rolle für dieses Gerät auswählen</label>
           <div class="grid grid-cols-2 gap-2">
             <button type="button" onclick="selectRole('admin')" id="roleBtn-admin"
-                    class="role-option p-3 rounded-xl border border-indigo-500 bg-indigo-600/20 text-white flex flex-col items-center gap-1.5 transition text-xs font-semibold">
-              <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
-              Aufruf-Raum (Admin)
+                    class="role-option p-2.5 rounded-xl border border-indigo-500 bg-indigo-600/20 text-white flex flex-col items-center gap-1 transition text-xs font-semibold">
+              <i data-lucide="sliders" class="w-4 h-4 text-indigo-400"></i>
+              Zentral-Admin
+            </button>
+            <button type="button" onclick="selectRole('room')" id="roleBtn-room"
+                    class="role-option p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600 flex flex-col items-center gap-1 transition text-xs font-semibold">
+              <i data-lucide="user-check" class="w-4 h-4 text-indigo-400"></i>
+              Raum-Desk
+            </button>
+            <button type="button" onclick="selectRole('kiosk')" id="roleBtn-kiosk"
+                    class="role-option p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600 flex flex-col items-center gap-1 transition text-xs font-semibold">
+              <i data-lucide="ticket" class="w-4 h-4 text-indigo-400"></i>
+              Ticket-Kiosk (Eingang)
             </button>
             <button type="button" onclick="selectRole('display')" id="roleBtn-display"
-                    class="role-option p-3 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600 flex flex-col items-center gap-1.5 transition text-xs font-semibold">
-              <i data-lucide="tv" class="w-5 h-5 text-indigo-400"></i>
-              Warteraum (Screen)
+                    class="role-option p-2.5 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600 flex flex-col items-center gap-1 transition text-xs font-semibold">
+              <i data-lucide="tv" class="w-4 h-4 text-indigo-400"></i>
+              Warteraum Monitor
             </button>
           </div>
+        </div>
+
+        <!-- Raum-Auswahl (nur wenn role == 'room') -->
+        <div id="roomSelectContainer" class="hidden">
+          <label class="block text-xs font-medium text-slate-300 mb-1">Welchem Raum bist du zugeteilt?</label>
+          <select id="assignedRoomSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-indigo-300 focus:outline-none focus:border-indigo-500">
+            <option value="Raum 1">Raum 1</option>
+            <option value="Raum 2">Raum 2</option>
+            <option value="Raum 3">Raum 3</option>
+            <option value="Raum 4">Raum 4</option>
+            <option value="Raum 5">Raum 5</option>
+            <option value="Rezeption">Rezeption</option>
+          </select>
         </div>
 
         <button id="btnJoin" onclick="joinSession()" class="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition active:scale-[0.99]">
@@ -105,8 +134,31 @@
     </div>
   </main>
 
-  <!-- ==================== VIEW 2: ADMIN / AUFRUF-RAUM ==================== -->
+  <!-- ==================== VIEW: WARTEN AUF FREIGABE ==================== -->
+  <main id="viewWaitingApproval" class="hidden flex-1 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-slate-800 border border-slate-700 rounded-2xl p-8 text-center space-y-4 shadow-2xl">
+      <div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto animate-pulse">
+        <i data-lucide="clock" class="w-8 h-8"></i>
+      </div>
+      <h3 class="text-xl font-bold text-white">Warten auf Bestätigung...</h3>
+      <p class="text-sm text-slate-400">Der Haupt-Admin am Desk muss deine Beitrittsanfrage bestätigen.</p>
+      <button onclick="leaveSession()" class="px-4 py-2 bg-slate-700 text-slate-300 hover:bg-slate-600 rounded-xl text-xs">
+        Abbrechen
+      </button>
+    </div>
+  </main>
+
+  <!-- ==================== VIEW 2: ZENTRAL-ADMIN ==================== -->
   <main id="viewAdmin" class="hidden flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full space-y-6">
+    <!-- Anfragenliste für den Host -->
+    <div id="hostApprovalBox" class="hidden bg-indigo-950/60 border border-indigo-500/40 rounded-2xl p-4 shadow-xl space-y-3">
+      <div class="flex items-center gap-2">
+        <i data-lucide="user-plus" class="w-5 h-5 text-indigo-400"></i>
+        <h4 class="text-sm font-bold text-white uppercase tracking-wider">Ausstehende Beitrittsanfragen</h4>
+      </div>
+      <div id="approvalRequestsList" class="space-y-2"></div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl flex items-center justify-between">
         <div>
@@ -122,7 +174,7 @@
       <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl flex items-center justify-between">
         <div>
           <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Aktuell im Aufruf</span>
-          <p id="adminCurrentCallingNum" class="text-3xl font-black text-amber-400 font-mono mt-1">-</p>
+          <p id="adminCurrentCallingNum" class="text-2xl font-black text-amber-400 font-mono mt-1">-</p>
         </div>
         <div class="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl">
           <i data-lucide="megaphone" class="w-6 h-6"></i>
@@ -145,8 +197,8 @@
     <div class="bg-slate-800/90 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-3">
         <div>
-          <h3 class="font-bold text-lg text-white">Tickets & Nummern Steuerung</h3>
-          <p class="text-xs text-slate-400">Klicke eine Aktion an, um den Status direkt auf Monitoren anzuzeigen.</p>
+          <h3 class="font-bold text-lg text-white">Tickets & Räume Steuerung</h3>
+          <p class="text-xs text-slate-400">Verwalte alle Räume und Warteschlangen zentral.</p>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="clearCompletedTickets()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-300 transition">
@@ -179,7 +231,63 @@
     </div>
   </main>
 
-  <!-- ==================== VIEW 3: WARTERAUM SCREEN ==================== -->
+  <!-- ==================== VIEW 3: RAUM-DESK ==================== -->
+  <main id="viewRoomDesk" class="hidden flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full space-y-6">
+    <div class="bg-slate-800/90 border border-slate-700 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col items-center text-center space-y-4">
+      <span class="px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+        Dein Arbeitsplatz
+      </span>
+      <h2 id="roomDeskTitle" class="text-4xl md:text-5xl font-black text-white">Raum --</h2>
+      
+      <div class="w-full max-w-sm bg-slate-900/80 border border-slate-700 rounded-2xl p-5 my-4">
+        <span class="text-xs text-slate-400 uppercase tracking-wider">Aktuell bei dir im Raum:</span>
+        <div id="roomDeskCurrentNumber" class="text-5xl font-black text-emerald-400 font-mono my-2">--</div>
+        <div id="roomDeskCurrentTime" class="text-xs text-slate-500">Aufgerufen um: --:--</div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md">
+        <button onclick="roomDeskCallNext()" class="py-4 px-6 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition">
+          <i data-lucide="user-plus" class="w-5 h-5"></i>
+          Nächsten aufrufen
+        </button>
+        <button onclick="roomDeskFinishCurrent()" class="py-4 px-6 bg-slate-700 hover:bg-slate-600 active:scale-95 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition">
+          <i data-lucide="check-circle" class="w-5 h-5"></i>
+          Raum freigeben (Fertig)
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-5">
+      <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Warteschlange (Gesamt)</h4>
+      <div id="roomDeskWaitingList" class="flex flex-wrap gap-2"></div>
+    </div>
+  </main>
+
+  <!-- ==================== VIEW 4: TICKET-KIOSK (EINGANGS-DESK) ==================== -->
+  <main id="viewKiosk" class="hidden flex-1 p-6 flex flex-col items-center justify-center max-w-2xl mx-auto w-full text-center space-y-8">
+    <div class="space-y-2">
+      <div class="inline-flex p-3 bg-indigo-600/20 text-indigo-400 rounded-2xl border border-indigo-500/30 mb-2">
+        <i data-lucide="ticket" class="w-10 h-10"></i>
+      </div>
+      <h2 class="text-4xl md:text-5xl font-black text-white">Willkommen!</h2>
+      <p class="text-slate-400 text-lg">Bitte tippe auf den Button, um deine Wartenummer zu ziehen.</p>
+    </div>
+
+    <!-- Großer Ziehen-Button -->
+    <button onclick="kioskPullTicket()" id="kioskBtn" class="w-full max-w-md py-8 px-6 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 active:scale-95 text-white rounded-3xl font-black text-2xl md:text-3xl shadow-2xl shadow-indigo-600/40 flex flex-col items-center justify-center gap-3 transition">
+      <i data-lucide="touch-interaction" class="w-10 h-10"></i>
+      NUMMER ZIEHEN
+    </button>
+
+    <!-- Bestätigungskarte nach dem Ziehen -->
+    <div id="kioskIssuedCard" class="hidden w-full max-w-md bg-slate-800 border-2 border-emerald-500/60 rounded-3xl p-6 shadow-2xl text-center space-y-3 animate-fade-in">
+      <span class="text-xs uppercase font-bold tracking-wider text-emerald-400">Deine Nummer lautet:</span>
+      <div id="kioskIssuedNumber" class="text-7xl font-black text-white font-mono drop-shadow">#---</div>
+      <p class="text-xs text-slate-400">Bitte nimm im Warteraum Platz und achte auf den Bildschirm.</p>
+    </div>
+  </main>
+
+  <!-- ==================== VIEW 5: WARTERAUM SCREEN ==================== -->
   <main id="viewDisplay" class="hidden flex-1 p-6 md:p-10 flex flex-col justify-between max-w-7xl mx-auto w-full">
     <div id="displayCallBanner" class="bg-gradient-to-r from-indigo-900/80 via-slate-800 to-indigo-900/80 border-2 border-indigo-500/50 rounded-3xl p-8 md:p-12 shadow-2xl text-center flex flex-col items-center justify-center space-y-4 transition-all">
       <span class="px-4 py-1.5 rounded-full text-sm font-semibold uppercase tracking-widest bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
@@ -220,15 +328,22 @@
   <script>
     const state = {
       sessionId: null,
-      role: 'admin',
+      role: 'admin', // 'admin', 'room', 'kiosk', 'display'
+      userName: '',
+      assignedRoom: 'Raum 1',
       isHost: false,
+      isApproved: false,
       nextNumber: 101,
       tickets: [],
+      pendingRequests: [],
       statusTypes: {
         WAIT: { label: 'Bitte warten', color: 'amber', isTerminal: false },
         ROOM_1: { label: 'Bitte in Raum 1', color: 'emerald', room: 'Raum 1', isTerminal: false },
         ROOM_2: { label: 'Bitte in Raum 2', color: 'emerald', room: 'Raum 2', isTerminal: false },
         ROOM_3: { label: 'Bitte in Raum 3', color: 'emerald', room: 'Raum 3', isTerminal: false },
+        ROOM_4: { label: 'Bitte in Raum 4', color: 'emerald', room: 'Raum 4', isTerminal: false },
+        ROOM_5: { label: 'Bitte in Raum 5', color: 'emerald', room: 'Raum 5', isTerminal: false },
+        RECEPTION: { label: 'Bitte zur Rezeption', color: 'cyan', room: 'Rezeption', isTerminal: false },
         DONE: { label: 'Fertig', color: 'slate', isTerminal: true },
         REJECTED: { label: 'Abgelehnt', color: 'rose', isTerminal: true }
       }
@@ -237,6 +352,7 @@
     let peer = null;
     let connections = [];
 
+    // --- Audio & Töne ---
     function playChime() {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -258,8 +374,25 @@
         osc1.start(now);
         osc1.stop(now + 1.2);
       } catch (e) {
-        console.warn('Audio konnte nicht abgespielt werden:', e);
+        console.warn('Audio-Fehler:', e);
       }
+    }
+
+    function playTicketBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+      } catch (e) {}
     }
 
     function speakCall(number, statusText) {
@@ -272,6 +405,7 @@
       }
     }
 
+    // --- Rollenauswahl Setup ---
     function selectRole(role) {
       state.role = role;
       document.querySelectorAll('.role-option').forEach(el => {
@@ -282,6 +416,13 @@
       if (activeBtn) {
         activeBtn.classList.remove('border-slate-700', 'bg-slate-900/60', 'text-slate-300');
         activeBtn.classList.add('border-indigo-500', 'bg-indigo-600/20', 'text-white');
+      }
+
+      const roomSelectContainer = document.getElementById('roomSelectContainer');
+      if (role === 'room') {
+        roomSelectContainer.classList.remove('hidden');
+      } else {
+        roomSelectContainer.classList.add('hidden');
       }
     }
 
@@ -295,18 +436,26 @@
       const code = generateSessionCode();
       state.sessionId = code;
       state.isHost = true;
+      state.isApproved = true;
       state.role = 'admin';
       initPeer(PEER_PREFIX + code, true);
     }
 
     function joinSession() {
       const codeInput = document.getElementById('inputJoinCode').value.trim();
+      const userNameInput = document.getElementById('inputUserName').value.trim();
+
       if (!codeInput) {
         alert('Bitte gib einen gültigen Session-Code ein.');
         return;
       }
+
       state.sessionId = codeInput;
+      state.userName = userNameInput || (state.role === 'kiosk' ? 'Ticket-Kiosk' : 'Station');
+      state.assignedRoom = document.getElementById('assignedRoomSelect').value;
       state.isHost = false;
+      state.isApproved = false;
+
       initPeer(null, false);
     }
 
@@ -323,14 +472,10 @@
         }
       };
 
-      if (peer) {
-        peer.destroy();
-      }
-
+      if (peer) peer.destroy();
       peer = customId ? new Peer(customId, peerConfig) : new Peer(peerConfig);
 
       peer.on('open', (id) => {
-        console.log('Peer ID erstellt:', id);
         if (asHost) {
           setupHostListeners();
           onConnectedSuccess();
@@ -349,12 +494,25 @@
           conn.on('open', () => {
             clearTimeout(timeout);
             connections = [conn];
-            onConnectedSuccess();
-            conn.send({ type: 'REQUEST_SYNC' });
+
+            if (state.role === 'display') {
+              state.isApproved = true;
+              onConnectedSuccess();
+              conn.send({ type: 'REQUEST_SYNC' });
+            } else {
+              document.getElementById('viewSetup').classList.add('hidden');
+              document.getElementById('viewWaitingApproval').classList.remove('hidden');
+              conn.send({
+                type: 'REQUEST_ACCESS',
+                userName: state.userName,
+                role: state.role,
+                room: state.assignedRoom
+              });
+            }
           });
 
           conn.on('data', (data) => {
-            handleIncomingData(data);
+            handleIncomingData(data, conn);
           });
 
           conn.on('close', () => {
@@ -364,7 +522,6 @@
 
           conn.on('error', (err) => {
             clearTimeout(timeout);
-            console.error('Conn-Fehler:', err);
             alert('Verbindungsfehler zum Host.');
             leaveSession();
           });
@@ -372,9 +529,8 @@
       });
 
       peer.on('error', (err) => {
-        console.error('Peer-Fehler:', err);
         if (err.type === 'unavailable-id') {
-          alert('Dieser Session-Code ist bereits belegt. Bitte neuen erstellen.');
+          alert('Dieser Session-Code ist bereits belegt.');
         } else if (err.type === 'peer-unavailable') {
           alert('Host nicht gefunden. Bitte Session-Code prüfen.');
         } else {
@@ -385,33 +541,116 @@
     }
 
     function setupHostListeners() {
+      document.getElementById('hostApprovalBox').classList.remove('hidden');
+
       peer.on('connection', (conn) => {
         connections.push(conn);
-        console.log('Neuer Client verbunden:', conn.peer);
 
         conn.on('data', (data) => {
-          handleIncomingData(data);
-          if (['UPDATE_TICKETS', 'NEW_TICKET', 'SET_STATUS'].includes(data.type)) {
-            broadcastState();
-          }
+          handleIncomingData(data, conn);
         });
 
         conn.on('close', () => {
           connections = connections.filter(c => c !== conn);
+          state.pendingRequests = state.pendingRequests.filter(r => r.peerId !== conn.peer);
+          renderApprovalList();
         });
-
-        setTimeout(() => {
-          if (conn.open) {
-            conn.send({
-              type: 'FULL_STATE',
-              payload: {
-                tickets: state.tickets,
-                nextNumber: state.nextNumber
-              }
-            });
-          }
-        }, 300);
       });
+    }
+
+    function handleIncomingData(data, conn) {
+      if (data.type === 'REQUEST_ACCESS' && state.isHost) {
+        state.pendingRequests.push({
+          peerId: conn.peer,
+          userName: data.userName,
+          role: data.role,
+          room: data.room,
+          conn: conn
+        });
+        renderApprovalList();
+        return;
+      }
+
+      if (data.type === 'ACCESS_RESPONSE') {
+        if (data.approved) {
+          state.isApproved = true;
+          document.getElementById('viewWaitingApproval').classList.add('hidden');
+          onConnectedSuccess();
+          conn.send({ type: 'REQUEST_SYNC' });
+        } else {
+          alert('Der Administrator hat deine Beitrittsanfrage abgelehnt.');
+          leaveSession();
+        }
+        return;
+      }
+
+      if (data.type === 'FULL_STATE') {
+        state.tickets = data.payload.tickets;
+        state.nextNumber = data.payload.nextNumber;
+        renderAll();
+
+        if (data.payload.callEvent) {
+          onTicketAnnounced(data.payload.callEvent);
+        }
+      } else if (data.type === 'TICKET_PULLED_ACK') {
+        showKioskIssuedTicket(data.number);
+      } else if (data.type === 'REQUEST_SYNC' && state.isHost) {
+        broadcastState();
+      } else if (data.type === 'CLIENT_ACTION' && state.isHost) {
+        if (data.action === 'ISSUE') {
+          const num = issueNextTicket();
+          if (conn && conn.open) {
+            conn.send({ type: 'TICKET_PULLED_ACK', number: num });
+          }
+        }
+        if (data.action === 'STATUS') setTicketStatus(data.number, data.statusCode);
+        if (data.action === 'CLEAR') clearCompletedTickets();
+        if (data.action === 'RESET') resetAllTickets();
+      }
+    }
+
+    function renderApprovalList() {
+      const container = document.getElementById('approvalRequestsList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (state.pendingRequests.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400 italic">Keine neuen Anfragen.</p>';
+        return;
+      }
+
+      state.pendingRequests.forEach((req, idx) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between bg-slate-900/80 p-3 rounded-xl border border-slate-700';
+        
+        let roleName = 'Zentral-Admin';
+        if (req.role === 'room') roleName = req.room;
+        if (req.role === 'kiosk') roleName = 'Ticket-Kiosk (Eingang)';
+
+        item.innerHTML = `
+          <div>
+            <div class="font-bold text-white text-sm">${req.userName}</div>
+            <div class="text-xs text-indigo-400">Rolle: ${roleName}</div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="approveRequest(${idx}, true)" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold">Zulassen</button>
+            <button onclick="approveRequest(${idx}, false)" class="px-3 py-1.5 bg-rose-600/30 text-rose-300 hover:bg-rose-600/50 rounded-lg text-xs">Ablehnen</button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function approveRequest(index, isApproved) {
+      const req = state.pendingRequests[index];
+      if (!req) return;
+
+      if (req.conn && req.conn.open) {
+        req.conn.send({ type: 'ACCESS_RESPONSE', approved: isApproved });
+      }
+
+      state.pendingRequests.splice(index, 1);
+      renderApprovalList();
     }
 
     function broadcastState(highlightCall = null) {
@@ -428,41 +667,23 @@
       });
     }
 
-    function handleIncomingData(data) {
-      if (data.type === 'FULL_STATE') {
-        state.tickets = data.payload.tickets;
-        state.nextNumber = data.payload.nextNumber;
-        renderAll();
-
-        if (data.payload.callEvent) {
-          onTicketAnnounced(data.payload.callEvent);
-        }
-      } else if (data.type === 'REQUEST_SYNC' && state.isHost) {
-        broadcastState();
-      } else if (data.type === 'CLIENT_ACTION' && state.isHost) {
-        // Aktionen von Clients verarbeiten
-        if (data.action === 'ISSUE') {
-          issueNextTicket();
-        } else if (data.action === 'STATUS') {
-          setTicketStatus(data.number, data.statusCode);
-        } else if (data.action === 'CLEAR') {
-          clearCompletedTickets();
-        } else if (data.action === 'RESET') {
-          resetAllTickets();
-        }
-      }
-    }
-
     function onConnectedSuccess() {
-      document.getElementById('headerStatus').innerText = state.isHost ? 'Host (Verbunden)' : 'Client (Verbunden)';
+      document.getElementById('headerStatus').innerText = state.isHost ? 'Admin Host (Verbunden)' : 'Verbunden';
       document.getElementById('sessionBadge').classList.remove('hidden');
       document.getElementById('sessionBadge').classList.add('flex');
       document.getElementById('sessionBadgeCode').innerText = state.sessionId;
       document.getElementById('disconnectBtn').classList.remove('hidden');
 
       document.getElementById('viewSetup').classList.add('hidden');
+      document.getElementById('viewWaitingApproval').classList.add('hidden');
+
       if (state.role === 'admin') {
         document.getElementById('viewAdmin').classList.remove('hidden');
+      } else if (state.role === 'room') {
+        document.getElementById('viewRoomDesk').classList.remove('hidden');
+        document.getElementById('roomDeskTitle').innerText = state.assignedRoom;
+      } else if (state.role === 'kiosk') {
+        document.getElementById('viewKiosk').classList.remove('hidden');
       } else {
         document.getElementById('viewDisplay').classList.remove('hidden');
       }
@@ -479,6 +700,7 @@
       connections = [];
       state.sessionId = null;
       state.isHost = false;
+      state.isApproved = false;
 
       document.getElementById('sessionBadge').classList.add('hidden');
       document.getElementById('sessionBadge').classList.remove('flex');
@@ -486,17 +708,21 @@
       document.getElementById('headerStatus').innerText = 'Nicht verbunden';
 
       document.getElementById('viewAdmin').classList.add('hidden');
+      document.getElementById('viewRoomDesk').classList.add('hidden');
+      document.getElementById('viewKiosk').classList.add('hidden');
       document.getElementById('viewDisplay').classList.add('hidden');
+      document.getElementById('viewWaitingApproval').classList.add('hidden');
       document.getElementById('viewSetup').classList.remove('hidden');
     }
 
     function copySessionCode() {
       if (state.sessionId) {
         navigator.clipboard.writeText(state.sessionId);
-        alert('Session Code kopiert: ' + state.sessionId);
+        alert('Session-Code kopiert: ' + state.sessionId);
       }
     }
 
+    // --- TICKET AKTIONEN ---
     function issueNextTicket() {
       if (!state.isHost && connections[0]) {
         connections[0].send({ type: 'CLIENT_ACTION', action: 'ISSUE' });
@@ -517,6 +743,35 @@
       state.tickets.unshift(newTicket);
       saveAndSync();
       renderAll();
+      return ticketNum;
+    }
+
+    // Kiosk Ticketziehen
+    function kioskPullTicket() {
+      playTicketBeep();
+      if (state.isHost) {
+        const num = issueNextTicket();
+        showKioskIssuedTicket(num);
+      } else if (connections[0]) {
+        connections[0].send({ type: 'CLIENT_ACTION', action: 'ISSUE' });
+      }
+    }
+
+    function showKioskIssuedTicket(number) {
+      const card = document.getElementById('kioskIssuedCard');
+      const numDisplay = document.getElementById('kioskIssuedNumber');
+      const btn = document.getElementById('kioskBtn');
+
+      numDisplay.innerText = '#' + number;
+      card.classList.remove('hidden');
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+
+      setTimeout(() => {
+        card.classList.add('hidden');
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+      }, 5000);
     }
 
     function setTicketStatus(number, statusCode) {
@@ -529,6 +784,16 @@
       if (!ticket) return;
 
       const conf = state.statusTypes[statusCode];
+
+      if (conf.room) {
+        state.tickets.forEach(t => {
+          if (t.number !== number && t.room === conf.room && !state.statusTypes[t.status].isTerminal) {
+            t.status = 'DONE';
+            t.room = null;
+          }
+        });
+      }
+
       ticket.status = statusCode;
       ticket.room = conf.room || null;
       ticket.calledAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -546,10 +811,55 @@
 
     function callNextInLine() {
       const waiting = [...state.tickets].reverse().find(t => t.status === 'WAIT');
-      if (waiting) {
-        setTicketStatus(waiting.number, 'ROOM_1');
-      } else {
+      if (!waiting) {
+        alert('Keine wartenden Tickets vorhanden.');
+        return;
+      }
+
+      const occupiedRooms = state.tickets
+        .filter(t => !state.statusTypes[t.status].isTerminal && t.room)
+        .map(t => t.room);
+
+      const availableRooms = [
+        { name: 'Raum 1', code: 'ROOM_1' },
+        { name: 'Raum 2', code: 'ROOM_2' },
+        { name: 'Raum 3', code: 'ROOM_3' },
+        { name: 'Raum 4', code: 'ROOM_4' },
+        { name: 'Raum 5', code: 'ROOM_5' }
+      ];
+
+      const freeRoom = availableRooms.find(r => !occupiedRooms.includes(r.name));
+      const targetRoomCode = freeRoom ? freeRoom.code : 'ROOM_1';
+
+      setTicketStatus(waiting.number, targetRoomCode);
+    }
+
+    function roomDeskCallNext() {
+      const waiting = [...state.tickets].reverse().find(t => t.status === 'WAIT');
+      if (!waiting) {
         alert('Keine wartenden Tickets in der Warteschlange.');
+        return;
+      }
+
+      const roomMapping = {
+        'Raum 1': 'ROOM_1',
+        'Raum 2': 'ROOM_2',
+        'Raum 3': 'ROOM_3',
+        'Raum 4': 'ROOM_4',
+        'Raum 5': 'ROOM_5',
+        'Rezeption': 'RECEPTION'
+      };
+
+      const code = roomMapping[state.assignedRoom] || 'ROOM_1';
+      setTicketStatus(waiting.number, code);
+    }
+
+    function roomDeskFinishCurrent() {
+      const currentInMyRoom = state.tickets.find(t => t.room === state.assignedRoom && !state.statusTypes[t.status].isTerminal);
+      if (currentInMyRoom) {
+        setTicketStatus(currentInMyRoom.number, 'DONE');
+      } else {
+        alert('In deinem Raum befindet sich aktuell kein Ticket.');
       }
     }
 
@@ -595,8 +905,10 @@
       }
     }
 
+    // --- Rendering ---
     function renderAll() {
       renderAdminView();
+      renderRoomDeskView();
       renderDisplayView();
       lucide.createIcons();
     }
@@ -607,7 +919,7 @@
       const waitingTickets = state.tickets.filter(t => t.status === 'WAIT');
       document.getElementById('adminWaitingCount').innerText = waitingTickets.length;
 
-      const lastCalled = state.tickets.find(t => t.status.startsWith('ROOM_'));
+      const lastCalled = state.tickets.find(t => t.room);
       document.getElementById('adminCurrentCallingNum').innerText = lastCalled ? '#' + lastCalled.number + ` (${lastCalled.room})` : '-';
 
       const tbody = document.getElementById('adminTicketTableBody');
@@ -629,6 +941,7 @@
         let badgeBg = 'bg-slate-700 text-slate-300';
         if (st.color === 'amber') badgeBg = 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
         if (st.color === 'emerald') badgeBg = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        if (st.color === 'cyan') badgeBg = 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30';
         if (st.color === 'rose') badgeBg = 'bg-rose-500/20 text-rose-300 border border-rose-500/40';
 
         tr.innerHTML = `
@@ -642,9 +955,12 @@
           <td class="py-3 px-4 text-right">
             <div class="inline-flex flex-wrap gap-1 justify-end">
               <button onclick="setTicketStatus(${ticket.number}, 'WAIT')" class="px-2 py-1 text-xs bg-amber-600/20 text-amber-300 hover:bg-amber-600/40 rounded border border-amber-600/40 font-medium">Warten</button>
-              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_1')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">Raum 1</button>
-              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_2')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">Raum 2</button>
-              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_3')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">Raum 3</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_1')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">R1</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_2')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">R2</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_3')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">R3</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_4')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">R4</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'ROOM_5')" class="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/40 rounded border border-emerald-600/40 font-medium">R5</button>
+              <button onclick="setTicketStatus(${ticket.number}, 'RECEPTION')" class="px-2 py-1 text-xs bg-cyan-600/20 text-cyan-300 hover:bg-cyan-600/40 rounded border border-cyan-600/40 font-medium">Rezeption</button>
               <button onclick="setTicketStatus(${ticket.number}, 'DONE')" class="px-2 py-1 text-xs bg-slate-700 text-slate-300 hover:bg-slate-600 rounded border border-slate-600 font-medium">Fertig</button>
               <button onclick="setTicketStatus(${ticket.number}, 'REJECTED')" class="px-2 py-1 text-xs bg-rose-600/20 text-rose-300 hover:bg-rose-600/40 rounded border border-rose-600/40 font-medium">Abgelehnt</button>
             </div>
@@ -654,8 +970,30 @@
       });
     }
 
+    function renderRoomDeskView() {
+      const myTicket = state.tickets.find(t => t.room === state.assignedRoom && !state.statusTypes[t.status].isTerminal);
+      
+      document.getElementById('roomDeskCurrentNumber').innerText = myTicket ? '#' + myTicket.number : '--';
+      document.getElementById('roomDeskCurrentTime').innerText = myTicket ? 'Aufgerufen um: ' + myTicket.calledAt : 'Aktuell leer';
+
+      const waitingList = document.getElementById('roomDeskWaitingList');
+      waitingList.innerHTML = '';
+      const waiting = state.tickets.filter(t => t.status === 'WAIT');
+
+      if (waiting.length === 0) {
+        waitingList.innerHTML = '<span class="text-xs text-slate-500">Keine Wartenden</span>';
+      } else {
+        waiting.forEach(t => {
+          const pill = document.createElement('span');
+          pill.className = 'px-2 py-1 rounded bg-slate-900 border border-amber-500/30 text-amber-300 font-mono text-xs';
+          pill.innerText = '#' + t.number;
+          waitingList.appendChild(pill);
+        });
+      }
+    }
+
     function renderDisplayView() {
-      const lastCalled = state.tickets.find(t => t.status.startsWith('ROOM_')) || state.tickets[0];
+      const lastCalled = state.tickets.find(t => t.room) || state.tickets[0];
 
       if (lastCalled) {
         document.getElementById('displayMainNumber').innerText = '#' + lastCalled.number;
@@ -668,18 +1006,19 @@
 
       const activeList = document.getElementById('displayActiveList');
       activeList.innerHTML = '';
-      const inRooms = state.tickets.filter(t => t.status.startsWith('ROOM_'));
+      const inRooms = state.tickets.filter(t => t.room && !state.statusTypes[t.status].isTerminal);
 
       if (inRooms.length === 0) {
         activeList.innerHTML = '<p class="text-sm text-slate-500 italic col-span-2">Derzeit wird niemand aufgerufen.</p>';
       } else {
-        inRooms.slice(0, 6).forEach(t => {
+        inRooms.forEach(t => {
+          const isReception = t.room === 'Rezeption';
           const card = document.createElement('div');
-          card.className = 'p-3.5 bg-slate-900/80 border border-emerald-500/40 rounded-2xl flex items-center justify-between';
+          card.className = `p-3.5 bg-slate-900/80 border ${isReception ? 'border-cyan-500/40' : 'border-emerald-500/40'} rounded-2xl flex items-center justify-between`;
           card.innerHTML = `
             <div class="flex items-center gap-3">
               <span class="text-2xl font-black text-white font-mono">#${t.number}</span>
-              <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold uppercase">${t.room}</span>
+              <span class="text-xs px-2 py-0.5 rounded ${isReception ? 'bg-cyan-500/20 text-cyan-300' : 'bg-emerald-500/20 text-emerald-300'} font-semibold uppercase">${t.room}</span>
             </div>
             <span class="text-xs text-slate-400 font-mono">${t.calledAt || ''}</span>
           `;
